@@ -1,0 +1,124 @@
+import numpy as np
+
+class Array:
+    def __init__(self, filas, columnas):
+        self.filas = filas
+        self.columnas = columnas
+        self.datos = np.zeros((filas, columnas), dtype=int)  # Matriz de ceros
+
+    def insertar_dato(self, fila, columna, dato):
+        self.datos[fila, columna] = dato
+
+    def recuperar_dato(self, fila, columna):
+        return self.datos[fila, columna]
+
+    def sumar(self, otro):
+        return Array(self.filas, self.columnas).set_datos(self.datos + otro.datos)
+
+    def restar(self, otro):
+        return Array(self.filas, self.columnas).set_datos(self.datos - otro.datos)
+
+    def multiplicar_escalar(self, escalar):
+        return Array(self.filas, self.columnas).set_datos(self.datos * escalar)
+
+    def multiplicar_array(self, otro):
+        if self.columnas != otro.filas:
+            raise ValueError("Columnas de la primera matriz deben ser iguales a las filas de la segunda matriz.")
+        return Array(self.filas, otro.columnas).set_datos(np.dot(self.datos, otro.datos))
+
+    def ordenar(self):
+        self.datos = np.sort(self.datos, axis=None).reshape(self.filas, self.columnas)
+
+    def buscar(self, dato):
+        return np.where(self.datos == dato)
+
+    def set_datos(self, nuevos_datos):
+        self.datos = nuevos_datos
+        return self
+
+    def __str__(self):
+        return str(self.datos)
+
+
+class Vector(Array):
+    def __init__(self, size):
+        super().__init__(1, size)
+
+    def __str__(self):
+        return str(self.datos.flatten())
+
+
+class Matriz(Array):
+    def __init__(self, filas, columnas):
+        super().__init__(filas, columnas)
+
+    def traspuesta(self):
+        return Matriz(self.columnas, self.filas).set_datos(self.datos.T)
+
+
+class MatrizCuadrada(Matriz):
+    def __init__(self, n):
+        super().__init__(n, n)
+
+    def determinante(self):
+        return int(np.linalg.det(self.datos))
+
+    def inversa(self):
+        return MatrizCuadrada(self.filas).set_datos(np.linalg.inv(self.datos))
+
+    def traza(self):
+        return np.trace(self.datos)
+
+
+class MatrizMultidimensional(Matriz):
+    def __init__(self, filas, columnas):
+        super().__init__(filas, columnas)
+
+
+class MatrizRectangular(Matriz):
+    def __init__(self, filas, columnas):
+        super().__init__(filas, columnas)
+
+
+def imprimir_array(array):
+    for i in range(array.filas):
+        print(" ".join(map(str, array.datos[i])))
+
+
+if __name__ == "__main__":
+    # Prueba de la clase Array
+    print("Probando Array")
+    array = Array(2, 2)
+    array.insertar_dato(0, 0, 1)
+    array.insertar_dato(0, 1, 2)
+    array.insertar_dato(1, 0, 3)
+    array.insertar_dato(1, 1, 4)
+    imprimir_array(array)
+
+    # Prueba de Vector
+    print("\nProbando Vector")
+    vector = Vector(3)
+    vector.insertar_dato(0, 0, 5)
+    vector.insertar_dato(0, 1, 6)
+    vector.insertar_dato(0, 2, 7)
+    print(vector)
+
+    # Prueba de Matriz
+    print("\nProbando Matriz")
+    matriz = Matriz(2, 2)
+    matriz.insertar_dato(0, 0, 1)
+    matriz.insertar_dato(0, 1, 2)
+    matriz.insertar_dato(1, 0, 3)
+    matriz.insertar_dato(1, 1, 4)
+    imprimir_array(matriz)
+
+    # Prueba de Matriz Cuadrada
+    print("\nProbando Matriz Cuadrada")
+    matriz_cuadrada = MatrizCuadrada(2)
+    matriz_cuadrada.insertar_dato(0, 0, 1)
+    matriz_cuadrada.insertar_dato(0, 1, 2)
+    matriz_cuadrada.insertar_dato(1, 0, 3)
+    matriz_cuadrada.insertar_dato(1, 1, 4)
+    imprimir_array(matriz_cuadrada)
+    print(f"Traza: {matriz_cuadrada.traza()}")
+    print(f"Determinante: {matriz_cuadrada.determinante()}")
