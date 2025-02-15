@@ -1,90 +1,199 @@
 import numpy as np
 
+# Definición de la clase Array
 class Array:
     def __init__(self, filas, columnas):
         self.filas = filas
         self.columnas = columnas
         self.datos = np.zeros((filas, columnas), dtype=int)  # Matriz de ceros
 
+    # Método para insertar un dato en una posición específica
     def insertar_dato(self, fila, columna, dato):
         self.datos[fila, columna] = dato
 
+    # Método para recuperar un dato de una posición específica
     def recuperar_dato(self, fila, columna):
         return self.datos[fila, columna]
 
+    # Método para sumar dos matrices
     def sumar(self, otro):
         return Array(self.filas, self.columnas).set_datos(self.datos + otro.datos)
 
+    # Método para restar dos matrices
     def restar(self, otro):
         return Array(self.filas, self.columnas).set_datos(self.datos - otro.datos)
 
+    # Método para multiplicar la matriz por un escalar
     def multiplicar_escalar(self, escalar):
         return Array(self.filas, self.columnas).set_datos(self.datos * escalar)
 
+    # Método para multiplicar dos matrices
     def multiplicar_array(self, otro):
         if self.columnas != otro.filas:
             raise ValueError("Columnas de la primera matriz deben ser iguales a las filas de la segunda matriz.")
         return Array(self.filas, otro.columnas).set_datos(np.dot(self.datos, otro.datos))
 
+    # Método para ordenar los elementos de la matriz
     def ordenar(self):
         self.datos = np.sort(self.datos, axis=None).reshape(self.filas, self.columnas)
 
+    # Método para buscar un dato en la matriz
     def buscar(self, dato):
         return np.where(self.datos == dato)
 
+    # Método para establecer nuevos datos en la matriz
     def set_datos(self, nuevos_datos):
         self.datos = nuevos_datos
         return self
 
+    # Método para convertir la matriz a una cadena de texto
     def __str__(self):
         return str(self.datos)
 
-
+# Definición de la clase Vector que hereda de Array
 class Vector(Array):
     def __init__(self, size):
         super().__init__(1, size)
 
+    # Método para convertir el vector a una cadena de texto
     def __str__(self):
         return str(self.datos.flatten())
 
-
+# Definición de la clase Matriz que hereda de Array
 class Matriz(Array):
     def __init__(self, filas, columnas):
         super().__init__(filas, columnas)
 
+    # Método para obtener la traspuesta de la matriz
     def traspuesta(self):
         return Matriz(self.columnas, self.filas).set_datos(self.datos.T)
 
-
+# Definición de la clase MatrizCuadrada que hereda de Matriz
 class MatrizCuadrada(Matriz):
     def __init__(self, n):
         super().__init__(n, n)
 
+    # Método para calcular el determinante de la matriz
     def determinante(self):
-        return int(np.linalg.det(self.datos))
+        if self.filas != self.columnas:
+            raise ValueError("La matriz debe ser cuadrada para calcular el determinante.")
+        return self._determinante_recursive(self.datos)
 
+    def _determinante_recursive(self, matriz):
+        # Caso base para una matriz 2x2
+        if len(matriz) == 2:
+            return matriz[0][0] * matriz[1][1] - matriz[0][1] * matriz[1][0]
+
+        # Recursión para matrices mayores
+        det = 0
+        for c in range(len(matriz)):
+            submatriz = [fila[:c] + fila[c+1:] for fila in matriz[1:]]
+            det += ((-1) ** c) * matriz[0][c] * self._determinante_recursive(submatriz)
+        return det
+
+    # Método para calcular la inversa de la matriz
     def inversa(self):
-        return MatrizCuadrada(self.filas).set_datos(np.linalg.inv(self.datos))
+        if self.filas != self.columnas:
+            raise ValueError("La matriz debe ser cuadrada para calcular la inversa.")
+        det = self.determinante()
+        if det == 0:
+            raise ValueError("La matriz no tiene inversa porque su determinante es 0.")
+        return MatrizCuadrada(self.filas).set_datos(self._adjunta().datos / det)
 
+    def _adjunta(self):
+        adjunta = np.zeros((self.filas, self.columnas))
+        for i in range(self.filas):
+            for j in range(self.columnas):
+                submatriz = [fila[:j] + fila[j+1:] for fila in (self.datos[:i] + self.datos[i+1:])]
+                adjunta[i][j] = ((-1) ** (i + j)) * self._determinante_recursive(submatriz)
+        return MatrizCuadrada(self.filas).set_datos(adjunta.T)
+
+    # Método para calcular la traza de la matriz
     def traza(self):
         return np.trace(self.datos)
 
+# Definición de la clase MatrizMultidimensional
+class MatrizMultidimensional:
+    def __init__(self, *dimensiones):
+        self.dimensiones = dimensiones
+        self.datos = self._crear_matriz(dimensiones)
 
-class MatrizMultidimensional(Matriz):
-    def __init__(self, filas, columnas):
-        super().__init__(filas, columnas)
+    def _crear_matriz(self, dimensiones):
+        if len(dimensiones) == 1:
+            return [0] * dimensiones[0]
+        return [self._crear_matriz(dimensiones[1:]) for _ in range(dimensiones[0])]
+
+    def _acceder_elemento(self, indices):
+        elemento = self.datos
+        for indice in indices:
+            elemento = elemento[indice]
+        return elemento
+
+    def _asignar_elemento(self, indices, valor):
+        elemento = self.datos
+        for indice in indices[:-1]:
+            elemento = elemento[indice]
+        elemento[indices[-1]] = valor
+
+    # Método para insertar un dato en una posición específica
+    def insertar_dato(self, *posicion, dato):
+        self._asignar_elemento(posicion, dato)
+
+    # Método para recuperar un dato de una posición específica
+    def recuperar_dato(self, *posicion):
+        return self._acceder_elemento(posicion)
+
+    # Método para sumar dos matrices multidimensionales
+    def sumar(self, otro):
+        if self.dimensiones != otro.dimensiones:
+            raise ValueError("Las dimensiones de las matrices deben ser iguales para sumarlas.")
+        resultado = MatrizMultidimensional(*self.dimensiones)
+        self._operar_matrices(self.datos, otro.datos, resultado.datos, lambda x, y: x + y)
+        return resultado
+
+    # Método para restar dos matrices multidimensionales
+    def restar(self, otro):
+        if self.dimensiones != otro.dimensiones:
+            raise ValueError("Las dimensiones de las matrices deben ser iguales para restarlas.")
+        resultado = MatrizMultidimensional(*self.dimensiones)
+        self._operar_matrices(self.datos, otro.datos, resultado.datos, lambda x, y: x - y)
+        return resultado
+
+    # Método para multiplicar la matriz multidimensional por un escalar
+    def multiplicar_escalar(self, escalar):
+        resultado = MatrizMultidimensional(*self.dimensiones)
+        self._operar_matrices(self.datos, escalar, resultado.datos, lambda x, y: x * y, escalar=True)
+        return resultado
+
+    def _operar_matrices(self, matriz1, matriz2, resultado, operacion, escalar=False):
+        if isinstance(matriz1, list):
+            for i in range(len(matriz1)):
+                self._operar_matrices(matriz1[i], matriz2 if escalar else matriz2[i], resultado[i], operacion, escalar)
+        else:
+            return operacion(matriz1, matriz2 if escalar else matriz2)  # Ahora devuelve el valor en vez de asignarlo a una lista
 
 
+
+    # Método para establecer nuevos datos en la matriz
+    def set_datos(self, nuevos_datos):
+        self.datos = nuevos_datos
+        return self
+
+    # Método para convertir la matriz a una cadena de texto
+    def __str__(self):
+        return str(self.datos)
+
+# Definición de la clase MatrizRectangular que hereda de Matriz
 class MatrizRectangular(Matriz):
     def __init__(self, filas, columnas):
         super().__init__(filas, columnas)
 
-
+# Función para imprimir una matriz
 def imprimir_array(array):
     for i in range(array.filas):
         print(" ".join(map(str, array.datos[i])))
 
-
+# Test de las clases
 if __name__ == "__main__":
     # Prueba de la clase Array
     print("Probando Array")
@@ -122,3 +231,40 @@ if __name__ == "__main__":
     imprimir_array(matriz_cuadrada)
     print(f"Traza: {matriz_cuadrada.traza()}")
     print(f"Determinante: {matriz_cuadrada.determinante()}")
+
+    # Prueba de Matriz Multidimensional
+    print("\nProbando Matriz Multidimensional")
+    matriz_multidimensional = MatrizMultidimensional(2, 2, 2)
+    matriz_multidimensional.insertar_dato(0, 0, 0, dato=1)
+    matriz_multidimensional.insertar_dato(0, 0, 1, dato=2)
+    matriz_multidimensional.insertar_dato(0, 1, 0, dato=3)
+    matriz_multidimensional.insertar_dato(0, 1, 1, dato=4)
+    matriz_multidimensional.insertar_dato(1, 0, 0, dato=5)
+    matriz_multidimensional.insertar_dato(1, 0, 1, dato=6)
+    matriz_multidimensional.insertar_dato(1, 1, 0, dato=7)
+    matriz_multidimensional.insertar_dato(1, 1, 1, dato=8)
+    print(matriz_multidimensional)
+
+    # Prueba de suma de matrices multidimensionales
+    matriz_multidimensional2 = MatrizMultidimensional(2, 2, 2)
+    matriz_multidimensional2.insertar_dato(0, 0, 0, dato=1)
+    matriz_multidimensional2.insertar_dato(0, 0, 1, dato=1)
+    matriz_multidimensional2.insertar_dato(0, 1, 0, dato=1)
+    matriz_multidimensional2.insertar_dato(0, 1, 1, dato=1)
+    matriz_multidimensional2.insertar_dato(1, 0, 0, dato=1)
+    matriz_multidimensional2.insertar_dato(1, 0, 1, dato=1)
+    matriz_multidimensional2.insertar_dato(1, 1, 0, dato=1)
+    matriz_multidimensional2.insertar_dato(1, 1, 1, dato=1)
+    suma = matriz_multidimensional.sumar(matriz_multidimensional2)
+    print(suma)
+
+    # Prueba de Matriz Rectangular
+    print("\nProbando Matriz Rectangular")
+    matriz_rectangular = MatrizRectangular(2, 3)
+    matriz_rectangular.insertar_dato(0, 0, 1)
+    matriz_rectangular.insertar_dato(0, 1, 2)
+    matriz_rectangular.insertar_dato(0, 2, 3)
+    matriz_rectangular.insertar_dato(1, 0, 4)
+    matriz_rectangular.insertar_dato(1, 1, 5)
+    matriz_rectangular.insertar_dato(1, 2, 6)
+    imprimir_array(matriz_rectangular)
